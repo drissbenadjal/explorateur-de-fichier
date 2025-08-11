@@ -29,11 +29,15 @@ const api = {
     onStatus: (cb) => electronAPI.ipcRenderer.on('splash:status', (_e, p) => cb(p))
   },
   version: () => electronAPI.ipcRenderer.invoke('app:version'),
+  price: {
+    ethEur: () => electronAPI.ipcRenderer.invoke('price:ethEur')
+  },
   wallet: {
     init: () => electronAPI.ipcRenderer.invoke('wallet:init'),
   balance: (opts) => electronAPI.ipcRenderer.invoke('wallet:balance', opts),
   send: (payload) => electronAPI.ipcRenderer.invoke('wallet:send', payload),
-  txStatus: (payload) => electronAPI.ipcRenderer.invoke('wallet:txStatus', payload)
+  txStatus: (payload) => electronAPI.ipcRenderer.invoke('wallet:txStatus', payload),
+  history: (opts) => electronAPI.ipcRenderer.invoke('wallet:history', opts)
   },
   win: {
     minimize: () => electronAPI.ipcRenderer.invoke('win:minimize'),

@@ -615,6 +615,71 @@ function registerWalletIpc() {
       return { error: e.message }
     }
   })
+  ipcMain.handle('wallet:history', async (_e, { address, chain = 'sepolia', apiKey, limit = 5 }) => {
+    try {
+      if (!address) return { error: 'address manquante' }
+      const base = chain === 'mainnet' ? 'https://api.etherscan.io/api' : 'https://api-sepolia.etherscan.io/api'
+      const params = new URLSearchParams({
+        module: 'account',
+        action: 'txlist',
+        address,
+        page: '1',
+        offset: String(Math.max(5, limit * 2)),
+        sort: 'desc'
+      })
+      if (apiKey) params.set('apikey', apiKey.trim())
+      const url = base + '?' + params.toString()
+      const resp = await fetch(url)
+      if (!resp.ok) return { error: 'HTTP ' + resp.status }
+      const data = await resp.json()
+      if (data.status === '0' && data.message !== 'No transactions found') {
+        return { error: data.result || data.message }
+      }
+      const list = Array.isArray(data.result) ? data.result : []
+      const out = list.slice(0, limit).map((tx) => {
+        const valEth = Number(tx.value) / 1e18
+        return {
+          hash: tx.hash,
+          from: tx.from,
+          to: tx.to,
+          valueEth: valEth,
+          time: Number(tx.timeStamp) * 1000,
+          direction: tx.from?.toLowerCase() === address.toLowerCase() ? 'out' : 'in',
+          confirmed: tx.confirmations && Number(tx.confirmations) > 0,
+          chain
+        }
+      })
+      return { items: out }
+    } catch (e) {
+      return { error: e.message }
+    }
+  })
+
+  // ===== Prix ETH/EUR (CSP contournée via main) =====
+  ipcMain.handle('price:ethEur', async () => {
+    try {
+      async function tryCoingecko() {
+        const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=eur&include_24hr_change=true')
+        if (!r.ok) throw new Error('coingecko http ' + r.status)
+        const j = await r.json()
+        if (!j?.ethereum) throw new Error('coingecko invalid')
+        return { price: j.ethereum.eur, change: j.ethereum.eur_24h_change, source: 'coingecko' }
+      }
+      async function tryBinance() {
+        const r = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=ETHEUR')
+        if (!r.ok) throw new Error('binance http ' + r.status)
+        const j = await r.json()
+        if (!j?.price) throw new Error('binance invalid')
+        return { price: parseFloat(j.price), change: null, source: 'binance' }
+      }
+      let data = null
+      try { data = await tryCoingecko() } catch { try { data = await tryBinance() } catch { /* ignore */ } }
+      if (!data) return { error: 'sources indisponibles' }
+      return data
+    } catch (e) {
+      return { error: e.message }
+    }
+  })
 }
 
 // ======== Gestion fenêtres (splash + principale) =========

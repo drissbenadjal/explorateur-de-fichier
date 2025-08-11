@@ -798,6 +798,79 @@ button {
 .shortcut-pill-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(95px,1fr)); gap:22px; padding:6px 4px 12px; }
 .shortcut-pill-list { position:relative; }
 .shortcut-pill-list.drop-active { outline:2px dashed var(--accent, #f4c137); outline-offset:4px; border-radius:24px; }
+
+/* ===== Wallet redesigned ===== */
+.wallet-hero { display:flex; flex-direction:column; gap:24px; }
+.wallet-balance-card { position:relative; display:flex; justify-content:space-between; align-items:stretch; gap:32px; padding:28px 34px; background:linear-gradient(135deg,#101b29,#0d141c); border:1px solid #1e2a33; border-radius:34px; color:#e6edf3; overflow:hidden; box-shadow:0 30px 60px -24px rgba(0,0,0,.6),0 8px 24px -10px rgba(0,0,0,.55); }
+.wallet-balance-card:before { content:''; position:absolute; inset:0; background:radial-gradient(circle at 20% 20%,rgba(78,148,255,.22),transparent 60%),radial-gradient(circle at 85% 70%,rgba(120,70,255,.18),transparent 65%); opacity:.9; pointer-events:none; }
+.wbc-left { display:flex; align-items:center; gap:26px; position:relative; z-index:2; }
+.eth-logo-circle { width:70px; height:70px; border-radius:22px; background:linear-gradient(145deg,#1f2d3a,#243747); display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px -4px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04) inset; color:#6fb5ff; }
+.wbc-balances { display:flex; flex-direction:column; gap:8px; }
+.wbc-label { font-size:12px; font-weight:600; letter-spacing:.6px; text-transform:uppercase; color:#87a2b7; }
+.wbc-main-amount { font-size:40px; font-weight:600; letter-spacing:.5px; background:linear-gradient(90deg,#f5f9fc,#c9e4ff); -webkit-background-clip:text; background-clip:text; color:transparent; line-height:1.1; text-shadow:0 4px 18px rgba(90,150,255,.25); }
+.wbc-sub-line { display:flex; align-items:center; gap:16px; font-size:13px; font-weight:500; }
+.wbc-eth-small { opacity:.85; font-size:14px; }
+.wbc-change { font-size:12px; padding:4px 10px 5px; border-radius:18px; font-weight:600; letter-spacing:.4px; background:rgba(255,255,255,.08); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); box-shadow:0 2px 6px -2px rgba(0,0,0,.45); }
+.wbc-change.pos { color:#46d26f; background:linear-gradient(145deg,rgba(40,160,70,.28),rgba(40,160,70,.12)); }
+.wbc-change.neg { color:#ff6b6b; background:linear-gradient(145deg,rgba(200,60,60,.3),rgba(200,60,60,.12)); }
+.wbc-actions { display:flex; gap:14px; align-items:center; position:relative; z-index:2; }
+.action-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; min-width:84px; padding:14px 12px 16px; background:linear-gradient(160deg,#182632,#142029); color:#dbe8f2; font-size:11px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; border:1px solid #24323d; border-radius:22px; cursor:pointer; position:relative; box-shadow:0 8px 20px -10px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.04) inset; transition:.22s background,.22s transform,.22s color,.22s border-color; }
+.action-btn svg { color:#8cc4ff; }
+.action-btn:hover:not(:disabled) { background:linear-gradient(160deg,#1f3140,#1a2934); transform:translateY(-3px); }
+.action-btn:active:not(:disabled) { transform:translateY(0); }
+.action-btn.ghost { background:linear-gradient(150deg,#141e26,#121a21); }
+.action-btn:disabled { opacity:.4; cursor:default; }
+
+/* RPC edit inline */
+.wallet-rpc-edit { margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; }
+
+/* Side panels adapt spacing */
+.wallet-side-panels { display:flex; flex-wrap:wrap; gap:26px; align-items:stretch; }
+.wallet-card.mini { flex:1; min-width:260px; background:rgba(255,255,255,0.82); backdrop-filter:blur(18px) saturate(170%); -webkit-backdrop-filter:blur(18px) saturate(170%); border:1px solid #e2e8ef; border-radius:24px; padding:18px 20px 20px; display:flex; flex-direction:column; gap:14px; position:relative; box-shadow:0 14px 32px -12px rgba(20,30,40,.18),0 4px 14px -6px rgba(20,30,40,.12); }
+:root[data-theme='dark'] .wallet-card.mini { background:linear-gradient(150deg,rgba(26,36,44,0.9),rgba(20,28,35,0.9)); border:1px solid #25323b; }
+.wc-title { font-size:12px; font-weight:600; letter-spacing:.6px; text-transform:uppercase; color:#576671; }
+.wc-empty { color:#6d7a85; }
+.net-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:10px; font-size:11px; }
+.net-grid .lbl { display:block; font-size:10px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; opacity:.65; }
+
+/* Modal send */
+.wallet-modal-overlay { position:fixed; inset:0; background:rgba(10,15,20,.55); backdrop-filter:blur(10px) saturate(160%); -webkit-backdrop-filter:blur(10px) saturate(160%); display:flex; align-items:center; justify-content:center; padding:40px 26px; z-index:2000; animation:fadeIn .25s ease; }
+@keyframes fadeIn { from { opacity:0; transform:scale(.96); } to { opacity:1; transform:scale(1); } }
+.wallet-modal { width:100%; max-width:480px; background:linear-gradient(150deg,#ffffff,#f2f6fa); border:1px solid #dfe6ec; border-radius:30px; padding:30px 34px 34px; display:flex; flex-direction:column; gap:26px; position:relative; box-shadow:0 40px 70px -26px rgba(0,0,0,.25),0 10px 30px -10px rgba(0,0,0,.18); animation:modalIn .35s cubic-bezier(.65,.05,.36,1); }
+@keyframes modalIn { from { opacity:0; transform:translateY(18px) scale(.96);} to { opacity:1; transform:translateY(0) scale(1);} }
+:root[data-theme='dark'] .wallet-modal { background:linear-gradient(150deg,#1d272f,#161e24); border:1px solid #293640; }
+.wm-head { display:flex; align-items:center; justify-content:space-between; }
+.wm-head h3 { margin:0; font-size:18px; font-weight:600; letter-spacing:.4px; background:linear-gradient(90deg,#1f2d3a,#2d3d48); -webkit-background-clip:text; background-clip:text; color:transparent; }
+:root[data-theme='dark'] .wm-head h3 { background:linear-gradient(90deg,#d6e2ea,#9fb5c6); -webkit-background-clip:text; background-clip:text; }
+.wm-close { width:38px; height:38px; border-radius:14px; border:1px solid #d9e2ea; background:#f2f6fa; cursor:pointer; font-size:16px; line-height:1; display:flex; align-items:center; justify-content:center; }
+.wm-close:hover { background:#e7eef3; }
+:root[data-theme='dark'] .wm-close { background:#1f2a31; border:1px solid #2d3943; color:#c9d4db; }
+:root[data-theme='dark'] .wm-close:hover { background:#27343d; }
+.wm-body { display:flex; flex-direction:column; gap:18px; }
+.wm-field { display:flex; flex-direction:column; gap:8px; font-size:13px; font-weight:500; color:#2b3742; }
+.wm-field span { font-size:12px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; color:#5e6d79; }
+:root[data-theme='dark'] .wm-field span { color:#7c8d99; }
+.wm-hint { font-size:11px; opacity:.7; }
+.wm-status { font-size:12px; color:#1d4ed8; font-weight:600; }
+.wm-error { font-size:12px; color:#e15252; font-weight:600; }
+.wm-actions { display:flex; gap:12px; justify-content:flex-end; }
+
+/* Dark theme overrides balance card */
+:root[data-theme='dark'] .wallet-balance-card { background:linear-gradient(135deg,#0d141a,#0b1116); border:1px solid #1c262e; }
+:root[data-theme='dark'] .wallet-balance-card:before { opacity:.7; }
+:root[data-theme='dark'] .eth-logo-circle { background:linear-gradient(145deg,#19232b,#1f2c36); color:#7ac4ff; }
+:root[data-theme='dark'] .wbc-label { color:#7893a6; }
+:root[data-theme='dark'] .wbc-main-amount { background:linear-gradient(90deg,#cfe6ff,#88c5ff); -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:0 4px 18px rgba(70,130,255,.25); }
+:root[data-theme='dark'] .action-btn { border:1px solid #2a3944; }
+:root[data-theme='dark'] .action-btn.ghost { background:linear-gradient(150deg,#141c23,#12191f); }
+:root[data-theme='dark'] .wallet-rpc-edit .ov-input { background:#1d262d; }
+
+@media (max-width: 860px) {
+  .wallet-balance-card { flex-direction:column; align-items:flex-start; gap:26px; padding:26px 26px 30px; }
+  .wbc-actions { align-self:stretch; flex-wrap:wrap; }
+  .action-btn { flex:1; min-width:130px; }
+}
+
 .shortcut-drop-overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:#1f2d35; background:rgba(255,255,255,0.78); backdrop-filter:blur(4px); border-radius:20px; z-index:5; pointer-events:none; text-align:center; padding:14px; letter-spacing:.4px; }
 :root[data-theme='dark'] .shortcut-drop-overlay { background:rgba(25,32,38,0.82); color:#e2ebf0; box-shadow:0 0 0 1px rgba(255,255,255,0.05) inset; }
 .shortcut-tile { position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; user-select:none; padding:10px 6px 14px; border-radius:20px; transition:.25s background,.25s box-shadow,.25s transform; background:linear-gradient(180deg,#ffffffcc,#f4f8fbcc); backdrop-filter:blur(4px); border:1px solid #e3eaef; }
