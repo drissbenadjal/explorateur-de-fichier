@@ -1,20 +1,17 @@
+/* === Variables & couleurs de base (original) === */
 :root {
   --ev-c-white: #ffffff;
   --ev-c-white-soft: #f8f8f8;
   --ev-c-white-mute: #f2f2f2;
-
   --ev-c-black: #1b1b1f;
   --ev-c-black-soft: #222222;
   --ev-c-black-mute: #282828;
-
   --ev-c-gray-1: #515c67;
   --ev-c-gray-2: #414853;
   --ev-c-gray-3: #32363f;
-
   --ev-c-text-1: rgba(255, 255, 245, 0.86);
   --ev-c-text-2: rgba(235, 235, 245, 0.6);
   --ev-c-text-3: rgba(235, 235, 245, 0.38);
-
   --ev-button-alt-border: transparent;
   --ev-button-alt-text: var(--ev-c-text-1);
   --ev-button-alt-bg: var(--ev-c-gray-3);
@@ -22,46 +19,256 @@
   --ev-button-alt-hover-text: var(--ev-c-text-1);
   --ev-button-alt-hover-bg: var(--ev-c-gray-2);
 }
-
 :root {
   --color-background: var(--ev-c-black);
   --color-background-soft: var(--ev-c-black-soft);
   --color-background-mute: var(--ev-c-black-mute);
-
   --color-text: var(--ev-c-text-1);
 }
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  font-weight: normal;
+/* === Thèmes dynamiques (light / dark) === */
+/* Par défaut (dark) déjà défini ci-dessus */
+:root[data-theme='light'] {
+  --color-background: #ffffff;
+  --color-background-soft: #f5f8fa;
+  --color-background-mute: #eef2f6;
+  --color-text: #1f2d3a;
 }
-
-ul {
-  list-style: none;
+:root[data-theme='dark'] {
+  --color-background: #0f1418;
+  --color-background-soft: #161d23;
+  --color-background-mute: #1d262e;
+  --color-text: #e6edf3;
 }
-
+/* Transitions douces */
+body { transition: background .3s ease, color .3s ease; }
+/* Adaptations basiques des composants principaux en thème sombre (le thème clair garde les couleurs existantes dans main.css) */
+:root[data-theme='dark'] body { background: var(--color-background) !important; color: var(--color-text); }
+:root[data-theme='dark'] .win-bar { background: linear-gradient(90deg, var(--color-background-soft) 0%, var(--color-background) 60%) !important; border-bottom:1px solid #25313b !important; }
+/* Drag bar dark améliorée avec léger accent translucide */
+:root[data-theme='dark'] .win-bar {
+  background: linear-gradient(90deg,#182127 0%,#141c22 55%,#12191f 100%),
+    radial-gradient(circle at 18% 40%,rgba(245,158,11,.20),transparent 70%);
+  background-blend-mode: overlay, normal;
+}
+:root[data-theme='dark'] .app-title { color:#e7eef3 !important; text-shadow:0 1px 2px rgba(0,0,0,.65); letter-spacing:.7px; }
+:root[data-theme='dark'] .win-bar { color:#dce4ea; }
+:root[data-theme='dark'] .win-btn { color:#d0d9e0; }
+:root[data-theme='dark'] .win-btn:hover { background:#1f2b33 !important; }
+:root[data-theme='dark'] .win-btn.close:hover { background:#b91c1c !important; }
+:root[data-theme='dark'] .win-btn:hover { background:#25313b !important; }
+:root[data-theme='dark'] .win-btn.close:hover { background:#ef4444 !important; }
+:root[data-theme='dark'] .ico-line:before,
+:root[data-theme='dark'] .ico-max:before,
+:root[data-theme='dark'] .ico-restore:before,
+:root[data-theme='dark'] .ico-restore:after,
+:root[data-theme='dark'] .ico-close:before,
+:root[data-theme='dark'] .ico-close:after { background: var(--color-text); border-color: var(--color-text); }
+:root[data-theme='dark'] .fe-layout.minimal,
+:root[data-theme='dark'] .fe-main.no-preview,
+:root[data-theme='dark'] .fe-main.overview-mode { background: var(--color-background) !important; color: var(--color-text); }
+:root[data-theme='dark'] .fe-sidebar.fancy,
+:root[data-theme='dark'] .sidebar-app { background: var(--color-background-soft) !important; border-right:1px solid #25313b !important; }
+:root[data-theme='dark'] .nav-bar,
+:root[data-theme='dark'] .nav-bar.refined { background: var(--color-background-soft) !important; border-bottom:1px solid #25313b !important; }
+:root[data-theme='dark'] .fe-side-list button,
+:root[data-theme='dark'] .side-item { color: #c0cbd4; }
+:root[data-theme='dark'] .fe-side-list button.active,
+:root[data-theme='dark'] .side-item.active { background:#1e3a8a !important; color:#fff !important; }
+:root[data-theme='dark'] .folder-name,
+:root[data-theme='dark'] .tile-name { color:#c0cbd4; }
+:root[data-theme='dark'] .tile-item.selected .tile-name,
+:root[data-theme='dark'] .folder-item.selected .folder-name { color:#3b82f6; }
+:root[data-theme='dark'] .fancy-menu,
+:root[data-theme='dark'] .ctx-menu { background: var(--color-background-soft) !important; border-color:#25313b !important; color: var(--color-text); }
+:root[data-theme='dark'] .shortcut-row,
+:root[data-theme='dark'] .ov-card,
+:root[data-theme='dark'] .kpi-item,
+:root[data-theme='dark'] .metric-row { background: var(--color-background-soft) !important; border-color:#25313b !important; color: var(--color-text); }
+/* Scrollbars */
+:root[data-theme='dark'] ::-webkit-scrollbar-thumb { background:#3a4651; }
+:root[data-theme='dark'] ::-webkit-scrollbar-thumb:hover { background:#4a5662; }
+:root[data-theme='light'] ::-webkit-scrollbar-thumb { background:#d2dae1; }
+:root[data-theme='light'] ::-webkit-scrollbar-thumb:hover { background:#c0c8cf; }
+/* Bouton bascule thème */
+.theme-toggle { color: var(--color-text); border:0; background:transparent; }
+.theme-toggle:hover { filter:brightness(1.2); }
+.no-drag { -webkit-app-region: no-drag; }
+/* === Reset & base (original) === */
+*, *::before, *::after { box-sizing:border-box; margin:0; font-weight:normal; }
+ul { list-style:none; }
 body {
   min-height: 100vh;
   color: var(--color-text);
   background: var(--color-background);
   line-height: 1.6;
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
-    sans-serif;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+/* Suppression déco coin overview */
+.ov-card:before { content: none !important; background: none !important; }
+/* Accent orange global (progress, indicateurs) */
+:root, :root[data-theme='light'], :root[data-theme='dark'] {
+  --accent-orange-1: #f59e0b; /* amber 500 */
+  --accent-orange-2: #f97316; /* orange 500 */
+  --accent-orange-3: #fb923c; /* orange 400 */
+}
+:root[data-theme] .storage-bar-fill { background:linear-gradient(90deg,var(--accent-orange-1),var(--accent-orange-2)) !important; }
+:root[data-theme] .bar-fill { background:linear-gradient(90deg,var(--accent-orange-1),var(--accent-orange-2)) !important; }
+:root[data-theme] .kpi-value { color: var(--accent-orange-2) !important; }
+:root[data-theme] .shortcut-btn.edit { color: var(--accent-orange-2) !important; }
+:root[data-theme] .shortcut-btn.edit:hover { border-color: var(--accent-orange-2) !important; color: var(--accent-orange-1) !important; }
+/* Segment courant du breadcrumb et path bar en orange */
+:root[data-theme] .path-seg:last-child { background: var(--accent-orange-3) !important; border-color: var(--accent-orange-2) !important; color:#3a2e13 !important; }
+:root[data-theme] .path-seg:last-child:hover { background: var(--accent-orange-2) !important; color:#fff !important; }
+/* Anneau performance (bar-fill variable déjà modifiée) */
+:root[data-theme] .ring-inner { border-color: var(--accent-orange-3) !important; }
+/* === Palette accent orange détaillée === */
+:root[data-theme='light'] { --accent-bg:#ffedd5; --accent-bg-hover:#fed7aa; --accent-text:#b45309; --accent-border:#f59e0b; --accent-glow:rgba(245,158,11,.35); --accent-pill:#fbbf24; }
+:root[data-theme='dark'] { --accent-bg:#3a2a12; --accent-bg-hover:#4b3415; --accent-text:#fbbf24; --accent-border:#f59e0b; --accent-glow:rgba(245,158,11,.45); --accent-pill:#f59e0b; }
+
+/* États actifs / sélectionnés uniformisés */
+:root[data-theme] .fe-side-list button.active { background:var(--accent-bg) !important; color:var(--accent-text) !important; font-weight:600; }
+:root[data-theme] .fe-side-list button.active:hover { background:var(--accent-bg-hover) !important; }
+:root[data-theme] .side-item.active { background:var(--accent-bg) !important; color:var(--accent-text) !important; }
+:root[data-theme] .side-item.active svg { color:var(--accent-text) !important; }
+:root[data-theme] .folder-item.selected .folder-name,
+:root[data-theme] .tile-item.selected .tile-name,
+:root[data-theme] .fe-file-row.active { color:var(--accent-text) !important; }
+:root[data-theme] .fe-file-row.active { background:var(--accent-bg) !important; font-weight:600; }
+:root[data-theme] .fe-file-row.active:hover { background:var(--accent-bg-hover) !important; }
+:root[data-theme] .tile-item.selected .tile-ext { background:var(--accent-bg-hover) !important; color:var(--accent-text) !important; }
+:root[data-theme] .menu-item.active, :root[data-theme] .ctx-mi.active { background:var(--accent-bg) !important; color:var(--accent-text) !important; }
+
+/* Icônes / contours sélection */
+:root[data-theme] .folder-item.selected .folder-icon { box-shadow:0 0 0 3px var(--accent-glow),0 6px 14px -4px rgba(0,0,0,.18) !important; }
+:root[data-theme] .tile-item.selected .tile-icon-wrap { box-shadow:0 0 0 3px var(--accent-glow),0 8px 18px -6px rgba(0,0,0,.28) !important; }
+
+/* Breadcrumb & path bar (déjà orange mais on homogénéise) */
+:root[data-theme] .path-seg:last-child { background:var(--accent-bg) !important; border-color:var(--accent-border) !important; color:var(--accent-text) !important; }
+:root[data-theme] .path-seg:last-child:hover { background:var(--accent-bg-hover) !important; }
+/* Breadcrumb segments mode sombre: segments non actifs plus neutres, dernier accent lisible */
+:root[data-theme='dark'] .path-seg { background:#1f2930 !important; border-color:#2b3841 !important; color:#c3ced5 !important; }
+:root[data-theme='dark'] .path-seg:hover { background:#25323a !important; }
+:root[data-theme='dark'] .path-seg:active { background:#293943 !important; }
+:root[data-theme='dark'] .path-seg:last-child { background:var(--accent-bg) !important; border-color:var(--accent-border)!important; color:var(--accent-text)!important; box-shadow:0 0 0 1px rgba(0,0,0,.4),0 2px 4px -2px rgba(0,0,0,.4); }
+:root[data-theme='dark'] .path-seg:last-child:hover { background:var(--accent-bg-hover)!important; }
+/* Path bar dark background */
+:root[data-theme='dark'] .path-bar { background:#151e24!important; border-color:#25323b!important; }
+
+/* Boutons nav / pills (si ajout plus tard) */
+:root[data-theme] .nav-pill.active, :root[data-theme] .nav-btn.active { background:var(--accent-bg) !important; color:var(--accent-text) !important; border-color:var(--accent-border) !important; }
+
+/* Focus accessible */
+:root[data-theme] .fe-side-list button:focus-visible,
+:root[data-theme] .nav-btn:focus-visible,
+:root[data-theme] .fe-crumb:focus-visible { outline:2px solid var(--accent-border) !important; }
+
+/* Progress / anneaux déjà gérés mais on renforce cohérence */
+:root[data-theme] .storage-bar-fill, :root[data-theme] .bar-fill { background:linear-gradient(90deg,var(--accent-border),var(--accent-pill)) !important; }
+/* Fond barres stockage selon thème */
+:root[data-theme='dark'] .storage-bar { background:#253039!important; }
+:root[data-theme='dark'] .bar-line { background:#253039!important; }
+/* Pourcentage stockage couleur accent et police renforcée */
+:root[data-theme] .storage-pct { color:var(--accent-pill)!important; font-weight:600; }
+/* Etiquette lecteur (C:, D: etc.) plus lisible */
+:root[data-theme='dark'] .storage-label { color:#d6e0e7!important; }
+:root[data-theme] .ring-inner { border-color:var(--accent-bg-hover) !important; }
+
+/* Badges / kpi accent value */
+:root[data-theme] .kpi-value { color:var(--accent-pill) !important; }
+
+/* Shortcuts editing */
+:root[data-theme] .shortcut-tile.editing { box-shadow:0 0 0 2px var(--accent-glow),0 4px 12px -4px rgba(0,0,0,.25) !important; }
+
+/* Hover sur sélection (folders grid) */
+:root[data-theme] .folder-item.selected:hover .folder-icon { filter:brightness(1.1) !important; }
+
+/* Amélioration hover sidebar (couleur accent translucide) pour light et dark */
+:root[data-theme='light'] { --accent-hover: rgba(245,158,11,0.14); }
+:root[data-theme='dark'] { --accent-hover: rgba(245,158,11,0.20); }
+:root[data-theme] .fe-side-list button:not(.active):hover { background: var(--accent-hover) !important; color: var(--accent-text) !important; }
+:root[data-theme] .side-item:not(.active):hover { background: var(--accent-hover) !important; color: var(--accent-text) !important; }
+
+/* Ajuste couleurs performance (anneau RAM, barres, labels) et variables accent pour dark/light */
+:root[data-theme='light'] { --accent:#f59e0b; --ring-bg:#f1f5f9; }
+:root[data-theme='dark'] { --accent:#f59e0b; --ring-bg:#2a343c; }
+:root[data-theme] .ring-inner { background:var(--color-background-soft)!important; color:var(--accent-text)!important; border:6px solid var(--ring-bg)!important; }
+:root[data-theme='dark'] .bar-line { background:#2a343c!important; }
+:root[data-theme] .metric-row span:first-child { color:var(--accent-text)!important; }
+:root[data-theme] .bar-fill { box-shadow:0 0 0 1px rgba(255,255,255,.15) inset!important; }
+
+/* ====================
+   Améliorations lisibilité mode sombre (Overview)
+   ==================== */
+:root[data-theme='dark'] .ov-title {
+  /* Remplacer gradient sombre par plus clair */
+  background:linear-gradient(90deg,#f5f8fa,#dbe5ec)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+  color:transparent!important;
+  text-shadow:0 2px 4px rgba(0,0,0,.45);
+}
+:root[data-theme='dark'] .ov-sub { color:#a8b7c3!important; }
+:root[data-theme='dark'] .ov-card-title { color:#c9d5de!important; }
+:root[data-theme='dark'] .kpi-label { color:#9fb0bd!important; }
+:root[data-theme='dark'] .kpi-value { color:#ffd080!important; }
+:root[data-theme='dark'] .kpi-sub { color:#8fa0ac!important; }
+:root[data-theme='dark'] .metric-row { color:#d2dbe2!important; }
+:root[data-theme='dark'] .metric-row span:first-child { color:#ffc76a!important; }
+:root[data-theme='dark'] .shortcut-label { color:#e0e8ee!important; text-shadow:0 1px 2px rgba(0,0,0,.55); }
+:root[data-theme='dark'] .side-group-label { color:#8fa0ad!important; }
+:root[data-theme='dark'] .cpu-lines .cpu-brand { color:#ffda99!important; }
+:root[data-theme='dark'] .cpu-lines .cpu-series { color:#fff!important; }
+:root[data-theme='dark'] .cpu-lines .cpu-extra { color:#d9e3ea!important; }
+:root[data-theme='dark'] .cpu-lines .cpu-cores { color:#a5b5c1!important; }
+:root[data-theme='dark'] .ring-inner { color:#ffd892!important; }
+
+/* Ajuster placeholder vide raccourcis / loading */
+:root[data-theme='dark'] .ov-empty { color:#8899a5!important; }
+:root[data-theme='dark'] .ov-loading { color:#9dadb9!important; }
+
+/* ====================
+   Menus (dropdown & context) mode sombre améliorés
+   ==================== */
+/* Conteneurs + flèche */
+:root[data-theme='dark'] .fancy-menu,
+:root[data-theme='dark'] .ctx-menu {
+  background:linear-gradient(145deg,#151e24,#1b262e 55%,#1f2a33);
+  border:1px solid #26333c !important;
+  box-shadow:0 20px 44px -14px rgba(0,0,0,.70),0 6px 16px -6px rgba(0,0,0,.55);
+  backdrop-filter:blur(20px) saturate(160%);
+  -webkit-backdrop-filter:blur(20px) saturate(160%);
+  color:#d4dde3 !important;
+}
+:root[data-theme='dark'] .fancy-menu:before { background:linear-gradient(145deg,#151e24,#1b262e); border:1px solid #26333c; border-bottom:0; border-right:0; }
+
+/* Titres / labels */
+:root[data-theme='dark'] .menu-section-label,
+:root[data-theme='dark'] .ctx-menu-title { color:#7e8c96 !important; }
+
+/* Items dropdown */
+:root[data-theme='dark'] .menu-item { color:#d1dbe1; }
+:root[data-theme='dark'] .menu-item:hover { background:#22313a; }
+:root[data-theme='dark'] .menu-item:active { background:#253640; }
+:root[data-theme='dark'] .menu-item.active { box-shadow:0 0 0 1px rgba(245,158,11,.35) inset; }
+
+/* Items contextuels */
+:root[data-theme='dark'] .ctx-mi { color:#d1dbe1; }
+:root[data-theme='dark'] .ctx-mi:hover { background:#22313a; }
+:root[data-theme='dark'] .ctx-mi:active { background:#253640; }
+:root[data-theme='dark'] .ctx-mi.active { box-shadow:0 0 0 1px rgba(245,158,11,.35) inset; }
+
+/* Diviseurs */
+:root[data-theme='dark'] .menu-divider { background:linear-gradient(90deg,#27343d,#2f3d47) !important; }
+
+/* Checkbox lignes */
+:root[data-theme='dark'] .menu-check { color:#ced7dd; }
+:root[data-theme='dark'] .menu-check:hover { background:#22313a; }
+:root[data-theme='dark'] .menu-check input { accent-color:var(--accent-border); }
+:root[data-theme='dark'] .menu-check span { color:#c9d2d8; }
+
+/* Sélection accent déjà gérée mais on ajoute un léger halo */
+:root[data-theme='dark'] .menu-item.active,
+:root[data-theme='dark'] .ctx-mi.active { filter:brightness(1.05); }

@@ -21,8 +21,48 @@ import {
   FaSearch,
   FaPlus
 } from 'react-icons/fa'
+import { FaCloudDownloadAlt } from 'react-icons/fa'
 
 export default function FileExplorer() {
+  // Helper de formatage CPU (évite ReferenceError si utilisé ailleurs / hot reload)
+  const formatCpu = useCallback((cpu) => {
+    if (!cpu) return { brand: 'CPU', series: '', extra: '', cores: '?', full: 'CPU' }
+    let raw = typeof cpu === 'string' ? cpu : cpu.model || 'CPU'
+    // Normaliser divers symboles et garantir espaces entre segments
+    raw = raw
+      .replace(/\(R\)|\(TM\)|\(r\)|\(tm\)/g, '')
+      // Séparer "CPU1234" éventuel => "CPU 1234"
+      .replace(/CPU(?=\d)/gi, 'CPU ')
+      // Retirer doubles espaces avant/ après
+      .replace(/\s+/g, ' ')
+      .trim()
+    // Retirer mots redondants mais garder l'espace propre
+    raw = raw
+      .replace(/\bProcessor\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+    const cores = typeof cpu === 'object' && cpu.cores != null ? cpu.cores : '?'
+    // Exemples restants: "AMD Ryzen 7 5800X3D 8-Core" ou "Intel Core i7-10750H CPU @ 2.60GHz"
+    let brand = ''
+    let series = ''
+    let extra = ''
+    const tokens = raw.split(/\s+/).filter(Boolean)
+    // Sauter éventuel token "CPU" seul au début
+    if (tokens[0] && /^(CPU)$/i.test(tokens[0]) && tokens.length > 1) tokens.shift()
+    if (tokens.length) {
+      brand = tokens.shift()
+    }
+    // Chercher un token contenant un chiffre (ex: 5800X3D ou i7-10750H)
+    const idxNum = tokens.findIndex((t) => /\d/.test(t))
+    if (idxNum >= 0) {
+      series = tokens.slice(0, idxNum).join(' ')
+      extra = tokens.slice(idxNum).join(' ')
+    } else {
+      series = tokens.join(' ')
+    }
+    const full = `${brand} ${series} ${extra}`.trim().replace(/\s{2,}/g, ' ')
+    return { brand, series, extra, cores, full }
+  }, [])
   // Etat principal
   const [currentPath, setCurrentPath] = useState('')
   const [entries, setEntries] = useState([])
@@ -48,7 +88,7 @@ export default function FileExplorer() {
   // Tri & options
   const [sortField, setSortField] = useState('name') // name | size | type | date
   const [sortDir, setSortDir] = useState('asc') // asc | desc
-  const [groupFolders, setGroupFolders] = useState(true)
+  const [groupFolders, setGroupFolders] = useState(false) // désactivé par défaut
   const [showSortMenu, setShowSortMenu] = useState(false)
   const [showOptionsMenu, setShowOptionsMenu] = useState(false)
   const [hideSpecialExts, setHideSpecialExts] = useState(true)
@@ -56,6 +96,9 @@ export default function FileExplorer() {
   const hideExtFor = useRef(new Set(['lnk', 'url', 'exe']))
   const sortMenuWrapRef = useRef(null)
   const optionsMenuWrapRef = useRef(null)
+  const [shortcutDragId, setShortcutDragId] = useState(null)
+  const [dragOverShortcutZone, setDragOverShortcutZone] = useState(false)
+  const shortcutZoneDragCounter = useRef(0)
 
   const load = useCallback(
     async (dir, pushHistory = true) => {
@@ -184,7 +227,6 @@ export default function FileExplorer() {
     const p = cleanPath(sc.path)
     window.api.fs.open(p)
   }
-
   const ensureShortcutIcon = useCallback(
     (p) => {
       const cp = cleanPath(p)
@@ -203,18 +245,110 @@ export default function FileExplorer() {
     },
     [shortcutIcons, cleanPath]
   )
-
-  // Précharger automatiquement les icônes pour raccourcis natifs (.lnk/.url/.exe)
-  useEffect(() => {
-    if (!shortcuts.length) return
-    shortcuts.forEach((sc) => {
-      const ext = sc.path.split('.').pop()?.toLowerCase()
-      if (['lnk', 'url', 'exe'].includes(ext) && !shortcutIcons[sc.path]) {
-        ensureShortcutIcon(sc.path)
-      }
+  // ============ Drag & Drop Shortcuts ============
+  const onShortcutDragStart = (e, id) => {
+    setShortcutDragId(id)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(id))
+  }
+  const reorderShortcuts = useCallback((fromId, toId) => {
+    if (fromId === toId) return
+    setShortcuts((prev) => {
+      const idxFrom = prev.findIndex((s) => s.id === fromId)
+      const idxTo = prev.findIndex((s) => s.id === toId)
+      if (idxFrom === -1 || idxTo === -1) return prev
+      const clone = [...prev]
+      const [item] = clone.splice(idxFrom, 1)
+      clone.splice(idxTo, 0, item)
+      // Optionnel: persister ordre via API si disponible
+      window.api?.app?.shortcuts?.reorder && window.api.app.shortcuts.reorder(clone.map((s) => s.id))
+      return clone
     })
-  }, [shortcuts, shortcutIcons, ensureShortcutIcon])
-
+  }, [])
+  const onShortcutDragOver = (e) => {
+    if (shortcutDragId == null) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    const el = e.currentTarget
+    el.classList.add('drag-over')
+  }
+  const onShortcutDragLeave = (e) => {
+    e.currentTarget.classList.remove('drag-over')
+  }
+  const onShortcutDrop = (e, overId) => {
+    e.preventDefault()
+    e.currentTarget.classList.remove('drag-over')
+    if (shortcutDragId != null) reorderShortcuts(shortcutDragId, overId)
+    setShortcutDragId(null)
+  }
+  const onShortcutDragEnd = () => {
+    document
+      .querySelectorAll('.shortcut-tile.drag-over')
+      .forEach((n) => n.classList.remove('drag-over'))
+    setShortcutDragId(null)
+  }
+  // ===== Drag & Drop création de raccourcis =====
+  const onShortcutAreaDragOver = (e) => {
+    if (![...e.dataTransfer.types].includes('Files')) return
+    e.preventDefault()
+  }
+  const onShortcutAreaDragEnter = (e) => {
+    if (![...e.dataTransfer.types].includes('Files')) return
+    e.preventDefault()
+    shortcutZoneDragCounter.current++
+    setDragOverShortcutZone(true)
+  }
+  const onShortcutAreaDragLeave = (e) => {
+    if (![...e.dataTransfer.types].includes('Files')) return
+    shortcutZoneDragCounter.current = Math.max(0, shortcutZoneDragCounter.current - 1)
+    if (shortcutZoneDragCounter.current === 0) setDragOverShortcutZone(false)
+  }
+  const onShortcutAreaDrop = (e) => {
+    if (!e.dataTransfer.files?.length) return
+    e.preventDefault()
+    shortcutZoneDragCounter.current = 0
+    setDragOverShortcutZone(false)
+    const dropped = extractDroppedPaths(e)
+    dropped.forEach(({ path: p, name }) => {
+      if (!p) return
+      const np = cleanPath(p)
+      if (shortcuts.some((s) => cleanPath(s.path).toLowerCase() === np.toLowerCase())) return
+      window.api.app.shortcuts.add({ name, path: np }).then((r) => {
+        if (!r?.error && r.item) {
+          setShortcuts((s) => [...s, { ...r.item, path: r.item.path }])
+          ensureShortcutIcon(r.item.path)
+        }
+      })
+    })
+  }
+  // Extraction robuste
+  function extractDroppedPaths(event) {
+    const out = []
+    for (const f of Array.from(event.dataTransfer.files || [])) {
+      const p = f.path || f.webkitRelativePath || ''
+      out.push({ path: p, name: f.name.replace(/\.[^/.]+$/, '') || f.name })
+    }
+    const uriList = event.dataTransfer.getData('text/uri-list')
+    if (uriList) {
+      uriList
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter((l) => l && !l.startsWith('#'))
+        .forEach((u) => {
+          if (!u.startsWith('file://')) return
+          try {
+            const dec = decodeURI(u.replace('file://', ''))
+            if (!out.some((o) => o.path === dec)) {
+              const base = dec.split(/[\\/]/).pop() || 'Fichier'
+              out.push({ path: dec, name: base.replace(/\.[^/.]+$/, '') })
+            }
+          } catch {
+            /* ignore */
+          }
+        })
+    }
+    return out
+  }
   // =====================
   // Fichiers & dossiers filtrés + tri
   // =====================
@@ -579,9 +713,34 @@ export default function FileExplorer() {
     setEditingShortcutId(null)
   }
 
+  // Update notification
+  const [updateReady, setUpdateReady] = useState(false)
+  useEffect(() => {
+    if (window.api?.app?.onUpdateReady) {
+      window.api.app.onUpdateReady(() => setUpdateReady(true))
+    }
+  }, [])
+  const installUpdate = () => {
+    window.api?.app?.installUpdate && window.api.app.installUpdate()
+  }
+
   // ========== Rendu ==========
   return (
     <div className="fe-layout minimal">
+      {/* Update banner */}
+      {updateReady && (
+        <div className="update-banner">
+          <div className="ub-left">
+            <FaCloudDownloadAlt size={14} />
+            <span>Mise à jour disponible</span>
+          </div>
+          <div className="ub-actions">
+            <button className="mini-btn" onClick={installUpdate}>
+              Redémarrer et installer
+            </button>
+          </div>
+        </div>
+      )}
       <aside className="sidebar-app">
         <div className="side-group" style={{ paddingBottom: 4 }}>
           <button
@@ -591,16 +750,6 @@ export default function FileExplorer() {
             <FaHome size={14} />
             <span>Overview</span>
           </button>
-        </div>
-        <div className="sidebar-search-wrap">
-          <FaSearch className="sidebar-search-ico" size={13} />
-          <input
-            className="sidebar-search-input"
-            placeholder="Search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            disabled={showOverview}
-          />
         </div>
         <div className="side-group">
           <div className="side-group-label">Quick Access</div>
@@ -699,7 +848,10 @@ export default function FileExplorer() {
       <main className={`fe-main ${showOverview ? 'overview-mode' : 'no-preview'}`}>
         {/* Barre top (cachée en mode Overview) */}
         {!showOverview && (
-          <div className="fe-topbar nav-bar refined">
+          <div
+            className="fe-topbar nav-bar refined"
+            style={{ display: 'flex', alignItems: 'center' }}
+          >
             <div className="nav-group nav-history">
               <button
                 type="button"
@@ -731,7 +883,7 @@ export default function FileExplorer() {
                 <FaSyncAlt size={14} />
               </button>
             </div>
-            <div className="nav-group breadcrumb-wrap">
+            <div className="nav-group breadcrumb-wrap" style={{ flex: 1, minWidth: 0 }}>
               <div className="path-bar">
                 {segments.map((s, i) => (
                   <span key={s.path} className="path-seg" onClick={() => load(s.path)}>
@@ -742,7 +894,7 @@ export default function FileExplorer() {
                 {!segments.length && <span className="path-placeholder">Chemin…</span>}
               </div>
             </div>
-            <div className="nav-group nav-actions">
+            <div className="nav-group nav-actions" style={{ gap: 8 }}>
               <button
                 className={`nav-pill ${viewMode === 'grid' ? 'active' : ''}`}
                 title="Grid view"
@@ -850,13 +1002,24 @@ export default function FileExplorer() {
                 )}
               </div>
             </div>
-            <div className="fe-status-zone mini">
+            <div className="fe-status-zone mini" style={{ marginLeft: 8 }}>
               {loading && <span className="spinner" />}
               {error && (
                 <span className="fe-status error" title={error}>
                   !
                 </span>
               )}
+            </div>
+            {/* Recherche tout à droite */}
+            <div className="top-search-wrap">
+              <FaSearch size={13} className="top-search-ico" />
+              <input
+                className="top-search-input"
+                placeholder="Rechercher..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                disabled={showOverview}
+              />
             </div>
           </div>
         )}
@@ -889,7 +1052,16 @@ export default function FileExplorer() {
                   </div>
                   <div className="shortcut-list">
                     {!shortcuts.length && <div className="ov-empty">Aucun raccourci</div>}
-                    <div className="shortcut-pill-list">
+                    <div
+                      className={`shortcut-pill-list ${dragOverShortcutZone ? 'drop-active' : ''}`}
+                      onDragOver={onShortcutAreaDragOver}
+                      onDragEnter={onShortcutAreaDragEnter}
+                      onDragLeave={onShortcutAreaDragLeave}
+                      onDrop={onShortcutAreaDrop}
+                    >
+                      {dragOverShortcutZone && (
+                        <div className="shortcut-drop-overlay">Déposez pour créer un raccourci</div>
+                      )}
                       {shortcuts.map((sc) => {
                         const ext = sc.path.split('.').pop()?.toLowerCase() || ''
                         const forceNative = ['lnk', 'url', 'exe'].includes(ext)
@@ -901,6 +1073,12 @@ export default function FileExplorer() {
                             className={`shortcut-tile ${isEditing ? 'editing' : ''}`}
                             tabIndex={0}
                             title={sc.path}
+                            draggable={!isEditing}
+                            onDragStart={(e) => onShortcutDragStart(e, sc.id)}
+                            onDragOver={(e) => onShortcutDragOver(e, sc.id)}
+                            onDragLeave={onShortcutDragLeave}
+                            onDrop={(e) => onShortcutDrop(e, sc.id)}
+                            onDragEnd={onShortcutDragEnd}
                             onDoubleClick={() => !isEditing && openShortcut(sc)}
                             onMouseEnter={() => ensureShortcutIcon(sc.path)}
                           >
@@ -1055,7 +1233,17 @@ export default function FileExplorer() {
                         </div>
                         <div className="metric-row">
                           <span>CPU</span>
-                          <span>{sysStats.cpu.model}</span>
+                          {(() => {
+                            const c = formatCpu(sysStats.cpu)
+                            return (
+                              <span className="cpu-lines" title={c.full}>
+                                <strong className="cpu-brand">{c.brand}</strong>
+                                {c.series && <span className="cpu-series"> {c.series}</span>}
+                                {c.extra && <span className="cpu-extra"> {c.extra}</span>}
+                                <span className="cpu-cores"> ({c.cores} cœurs)</span>
+                              </span>
+                            )
+                          })()}
                         </div>
                         <div className="metric-row small">
                           <span>Cœurs</span>

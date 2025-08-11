@@ -6,6 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import { execSync } from 'child_process'
 import os from 'os'
+import { autoUpdater } from 'electron-updater'
 
 function listDrives() {
   // Windows: tester les lettres A-Z et enrichir avec free/size si possible
@@ -421,9 +422,9 @@ function registerFsIpc() {
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 1100,
+    width: 1200,
     height: 720,
-    minWidth: 860,
+    minWidth: 1200,
     minHeight: 520,
     show: false,
     frame: false,
@@ -508,6 +509,25 @@ app.whenReady().then(() => {
   registerWindowControls()
 
   createWindow()
+
+  // Auto update (production only)
+  if (!is.dev) {
+    try {
+      autoUpdater.autoDownload = true
+      autoUpdater.logger = require('electron-log')
+      autoUpdater.logger.transports.file.level = 'info'
+      autoUpdater.checkForUpdatesAndNotify()
+      autoUpdater.on('update-downloaded', () => {
+        const win = BrowserWindow.getAllWindows()[0]
+        win && win.webContents.send('update:ready')
+      })
+      ipcMain.handle('update:quitAndInstall', () => {
+        autoUpdater.quitAndInstall()
+      })
+    } catch (e) {
+      console.error('Updater init error', e)
+    }
+  }
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

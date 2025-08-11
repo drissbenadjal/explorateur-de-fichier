@@ -1,3 +1,4 @@
-provider: generic
-url: https://example.com/auto-updates
+provider: github
+owner: drissbenadjal
+repo: explorateur-de-fichier
 updaterCacheDirName: ultraxplorateur-updater

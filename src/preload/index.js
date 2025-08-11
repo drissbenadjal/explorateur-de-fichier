@@ -20,7 +20,9 @@ const api = {
       list: () => electronAPI.ipcRenderer.invoke('app:shortcuts:list'),
       add: (item) => electronAPI.ipcRenderer.invoke('app:shortcuts:add', item),
       remove: (id) => electronAPI.ipcRenderer.invoke('app:shortcuts:remove', id)
-    }
+    },
+    onUpdateReady: (cb) => electronAPI.ipcRenderer.on('update:ready', cb),
+    installUpdate: () => electronAPI.ipcRenderer.invoke('update:quitAndInstall')
   },
   win: {
     minimize: () => electronAPI.ipcRenderer.invoke('win:minimize'),
