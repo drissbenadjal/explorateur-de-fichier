@@ -1,0 +1,219 @@
+/* Dashboard Wallet Style - Dark Neon Theme */
+.wallet-dashboard {
+  background: linear-gradient(135deg, #181c2b 60%, #23243a 100%);
+  min-height: 100vh;
+  color: #fff;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  padding: 40px 0;
+}
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px 30px 40px;
+}
+.dashboard-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+.wallet-info {
+  background: #23243a;
+  border-radius: 12px;
+  padding: 8px 18px;
+  font-size: 1rem;
+  color: #b2b6c8;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dashboard-actions .btn {
+  background: #23243a;
+  color: #7fffd4;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 22px;
+  margin-left: 10px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.dashboard-actions .btn.send {
+  color: #7b7bff;
+}
+.dashboard-actions .btn:hover {
+  background: #2d2f4a;
+}
+.dashboard-main {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 32px;
+  padding: 0 40px;
+}
+.wallet-value-section {
+  background: #23243a;
+  border-radius: 32px;
+  padding: 32px 24px;
+  box-shadow: 0 4px 32px #000a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.wallet-value-circle {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  margin-bottom: 24px;
+}
+.wallet-value-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+.wallet-value {
+  font-size: 2.8rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #fff;
+  text-shadow: 0 2px 12px #7fffd4a0;
+}
+.wallet-currency {
+  font-size: 1.1rem;
+  color: #b2b6c8;
+}
+.wallet-assets {
+  margin-top: 18px;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 24px;
+  font-size: 1rem;
+}
+.asset-name.one { color: #7fffd4; font-weight: 600; }
+.asset-name.elrond { color: #7b7bff; font-weight: 600; }
+.asset-name.kava { color: #7fffd4; font-weight: 600; }
+.asset-name.polkadot,
+.asset-name.kusama,
+.asset-name.centrifuge { color: #b2b6c8; font-weight: 600; }
+.transactions-section {
+  background: #23243a;
+  border-radius: 32px;
+  padding: 28px 20px;
+  box-shadow: 0 4px 32px #000a;
+  margin-bottom: 18px;
+}
+.transactions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.transactions-header h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.see-all {
+  color: #7fffd4;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+}
+.transactions-graph {
+  margin-bottom: 18px;
+  width: 100%;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.transactions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.transactions-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+.tx-asset.one { color: #7fffd4; font-weight: 600; }
+.tx-asset.elrond { color: #7b7bff; font-weight: 600; }
+.tx-amount.positive { color: #7fffd4; }
+.tx-amount.negative { color: #ff6c6c; }
+.tx-date { color: #b2b6c8; font-size: 0.95rem; }
+.token-rates-section {
+  background: #23243a;
+  border-radius: 32px;
+  padding: 28px 20px;
+  box-shadow: 0 4px 32px #000a;
+  margin-bottom: 18px;
+}
+.token-rates-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.token-rates-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+.token-name.usdt { color: #7fffd4; font-weight: 600; }
+.token-name.neo { color: #ff6c6c; font-weight: 600; }
+.token-name.harmony { color: #7b7bff; font-weight: 600; }
+.earnings-section {
+  background: #23243a;
+  border-radius: 32px;
+  padding: 28px 20px;
+  box-shadow: 0 4px 32px #000a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.earnings-card {
+  background: #23243a;
+  border-radius: 18px;
+  padding: 24px 18px;
+  box-shadow: 0 2px 16px #000a;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.earnings-icon {
+  font-size: 2.2rem;
+  color: #7fffd4;
+  background: #23243a;
+  border-radius: 50%;
+  padding: 12px;
+  box-shadow: 0 2px 12px #7fffd4a0;
+}
+.earnings-info span {
+  font-size: 1.1rem;
+  color: #b2b6c8;
+  font-weight: 500;
+}
+.btn.stake {
+  background: #7fffd4;
+  color: #23243a;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 22px;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-top: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn.stake:hover {
+  background: #7b7bff;
+  color: #fff;
+}

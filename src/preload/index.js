@@ -24,6 +24,17 @@ const api = {
     onUpdateReady: (cb) => electronAPI.ipcRenderer.on('update:ready', cb),
     installUpdate: () => electronAPI.ipcRenderer.invoke('update:quitAndInstall')
   },
+  splash: {
+    launchMain: () => electronAPI.ipcRenderer.invoke('splash:launchMain'),
+    onStatus: (cb) => electronAPI.ipcRenderer.on('splash:status', (_e, p) => cb(p))
+  },
+  version: () => electronAPI.ipcRenderer.invoke('app:version'),
+  wallet: {
+    init: () => electronAPI.ipcRenderer.invoke('wallet:init'),
+  balance: (opts) => electronAPI.ipcRenderer.invoke('wallet:balance', opts),
+  send: (payload) => electronAPI.ipcRenderer.invoke('wallet:send', payload),
+  txStatus: (payload) => electronAPI.ipcRenderer.invoke('wallet:txStatus', payload)
+  },
   win: {
     minimize: () => electronAPI.ipcRenderer.invoke('win:minimize'),
     maximize: () => electronAPI.ipcRenderer.invoke('win:maximize'),

@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Chargement...</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+  <style>
+    :root { color-scheme: dark; }
+    body { margin:0; font-family: system-ui, 'Segoe UI', Roboto, sans-serif; background:#0f1114; color:#e6eef5; height:100vh; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .card { position:relative; width:520px; max-width:90vw; padding:54px 64px 56px; background:#181b20; border:1px solid #23272e; border-radius:18px; box-shadow:0 8px 32px -8px rgba(0,0,0,.55),0 2px 6px -2px rgba(0,0,0,.4); display:flex; flex-direction:column; align-items:flex-start; gap:26px; }
+    .logoRow { display:flex; align-items:center; gap:18px; }
+    .logo { width:78px; height:78px; filter:drop-shadow(0 4px 10px rgba(0,0,0,.35)); }
+    h1 { font-size:40px; line-height:1; margin:0; font-weight:500; letter-spacing:.5px; background:linear-gradient(90deg,#56ccf2,#2f80ed); -webkit-background-clip:text; color:transparent; }
+    .tagline { margin:0; font-size:13px; font-weight:400; opacity:.75; letter-spacing:.4px; }
+    .version { font-size:17px; font-weight:400; opacity:.85; margin-top:4px; }
+  .progress { width:100%; height:14px; background:#20252c; border:1px solid #2c333d; border-radius:7px; overflow:hidden; position:relative; }
+  .progress .fill { position:absolute; inset:0; width:0%; background:linear-gradient(90deg,#2f80ed,#56ccf2); box-shadow:0 0 0 1px rgba(255,255,255,.03) inset; transition:width .35s cubic-bezier(.4,.12,.2,1); }
+  .progress.indet .fill { width:40%; animation:indet 1.2s ease-in-out infinite; }
+  @keyframes indet { 0% { transform:translateX(-60%);} 50% { transform:translateX(40%);} 100% { transform:translateX(120%);} }
+    .msg { font-size:13px; opacity:.7; letter-spacing:.3px; }
+    .install { color:#6bc9ff; }
+    .corner { position:absolute; width:160px; opacity:.18; }
+    .corner.tr { top:-30px; right:-50px; transform:rotate(30deg); }
+    .corner.bl { bottom:-40px; left:-60px; transform:rotate(-18deg); }
+  </style>
+  </head>
+  <body>
+    <div class="card">
+      <img src="./assets/logo.svg" class="corner tr" alt="" />
+      <img src="./assets/logo.svg" class="corner bl" alt="" />
+      <div class="logoRow">
+        <img src="./assets/logo.svg" class="logo" alt="logo" />
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <h1>UltraXplorateur</h1>
+          <p class="tagline">Explorer & gérer vos fichiers en toute fluidité</p>
+        </div>
+      </div>
+      <div class="version" id="version">v...</div>
+  <div class="progress indet" id="progress"><div class="fill" id="fill"></div></div>
+      <div class="msg" id="msg">Initialisation…</div>
+    </div>
+    <script type="module">
+      const msgEl = document.getElementById('msg')
+      const progressEl = document.getElementById('progress')
+      const fillEl = document.getElementById('fill')
+      const set = (t)=> msgEl.textContent = t
+      // Affiche version
+      window.api?.version?.().then(v => {
+        const vEl = document.getElementById('version'); if(vEl) vEl.textContent = 'v. ' + v
+      }).catch(()=>{})
+      function setPercent(p){
+        if(typeof p === 'number' && isFinite(p)){
+          if(progressEl.classList.contains('indet')) progressEl.classList.remove('indet')
+          const clamped = Math.max(0, Math.min(100, p))
+          fillEl.style.width = clamped + '%'
+        }
+      }
+      window.electron?.ipcRenderer.on('splash:status', (_e, p) => {
+        switch(p.status){
+          case 'boot': set('Initialisation…'); break
+          case 'checking': set('Recherche de mise à jour…'); break
+          case 'update-available': set('Mise à jour disponible…'); break
+          case 'downloading': set('Téléchargement de la mise à jour…'); setPercent(p.percent); break
+          case 'downloaded': set('Installation de la mise à jour…'); setPercent(100); break
+          case 'installing': set('Installation…'); break
+          case 'no-update': set('Chargement de l’application…'); break
+          case 'dev': set('Mode développement…'); break
+          case 'error': set('Erreur, lancement…'); break
+          case 'launching': set('Lancement…'); setPercent(100); break
+        }
+      })
+    </script>
+  </body>
+</html>

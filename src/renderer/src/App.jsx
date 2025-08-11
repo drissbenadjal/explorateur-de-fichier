@@ -1,8 +1,10 @@
 import FileExplorer from './components/FileExplorer'
+import WalletPage from './components/WalletPage'
 import { useEffect, useState } from 'react'
 import { FaMoon, FaSun } from 'react-icons/fa'
 
 function App() {
+  const [page, setPage] = useState('explorer') // explorer | wallet
   const [max, setMax] = useState(false)
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('theme')
@@ -51,7 +53,11 @@ function App() {
           </button>
         </div>
       </div>
-      <FileExplorer />
+      {page === 'explorer' ? (
+        <FileExplorer onOpenWallet={() => setPage('wallet')} />
+      ) : (
+        <WalletPage onBack={() => setPage('explorer')} />
+      )}
     </>
   )
 }

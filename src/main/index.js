@@ -7,6 +7,8 @@ import path from 'path'
 import { execSync } from 'child_process'
 import os from 'os'
 import { autoUpdater } from 'electron-updater'
+import { randomUUID } from 'crypto'
+import { ethers } from 'ethers'
 
 function listDrives() {
   // Windows: tester les lettres A-Z et enrichir avec free/size si possible
@@ -419,9 +421,211 @@ function registerFsIpc() {
   })
 }
 
-function createWindow() {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
+// ====== Wallet ETH (simple) ======
+function walletStoreFile() {
+  try {
+    return path.join(app.getPath('userData'), 'wallet.json')
+  } catch {
+    return path.join(process.cwd(), 'wallet.json')
+  }
+}
+function loadWalletFile() {
+  const f = walletStoreFile()
+  if (fs.existsSync(f)) {
+    try {
+      return JSON.parse(fs.readFileSync(f, 'utf8'))
+  } catch {
+      // ignore parse error
+    }
+  }
+  return null
+}
+function saveWalletFile(data) {
+  try {
+    fs.writeFileSync(walletStoreFile(), JSON.stringify(data, null, 2), 'utf8')
+  } catch {
+    // ignore write error
+  }
+}
+
+// ===== RPC Ethereum fallbacks (Sépolia & Mainnet) =====
+const FALLBACK_RPCS = {
+  sepolia: [
+    'https://rpc.sepolia.org',
+    'https://1rpc.io/sepolia',
+    'https://ethereum-sepolia-rpc.publicnode.com',
+    'https://sepolia.drpc.org'
+  ],
+  mainnet: [
+    'https://cloudflare-eth.com',
+    'https://ethereum-rpc.publicnode.com',
+    'https://eth.llamarpc.com',
+    'https://1rpc.io/eth',
+    'https://rpc.ankr.com/eth'
+  ]
+}
+// cache par chaîne
+const cachedRpc = {}
+
+async function createProviderWithTimeout(url, ms = 5000, expectedChain) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), ms)
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_chainId', params: [] }),
+      signal: controller.signal
+    })
+    const txt = await resp.text()
+    let json
+    try {
+      json = JSON.parse(txt)
+    } catch {
+      throw new Error('Réponse non JSON')
+    }
+    const chainHex = json?.result
+    if (!chainHex) throw new Error('Réponse sans result')
+    const chainId = parseInt(chainHex, 16)
+    if (expectedChain && chainId !== expectedChain) throw new Error('Chaîne inattendue: ' + chainId)
+    const netName = chainId === 1 ? 'mainnet' : chainId === 11155111 ? 'sepolia' : 'unknown'
+    const provider = new ethers.JsonRpcProvider(url, { chainId, name: netName })
+    return provider
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function resolveProvider(preferredUrl, chain) {
+  const fallbacks = FALLBACK_RPCS[chain] || []
+  const tried = new Set()
+  const order = []
+  if (preferredUrl) order.push(preferredUrl)
+  if (cachedRpc[chain] && !order.includes(cachedRpc[chain])) order.push(cachedRpc[chain])
+  for (const u of fallbacks) if (!order.includes(u)) order.push(u)
+  for (const url of order) {
+    if (tried.has(url)) continue
+    tried.add(url)
+    try {
+      const expected = chain === 'mainnet' ? 1 : chain === 'sepolia' ? 11155111 : undefined
+      const provider = await createProviderWithTimeout(url, 6000, expected)
+      cachedRpc[chain] = url
+      return { provider, url }
+    } catch {
+      // next
+    }
+  }
+  throw new Error('Aucun RPC accessible pour ' + chain)
+}
+
+async function withRpc({ preferredUrl, chain }, fn) {
+  const errors = []
+  const tried = new Set()
+  const fallbacks = FALLBACK_RPCS[chain] || []
+  const order = []
+  if (preferredUrl) order.push(preferredUrl)
+  if (cachedRpc[chain] && !order.includes(cachedRpc[chain])) order.push(cachedRpc[chain])
+  for (const u of fallbacks) if (!order.includes(u)) order.push(u)
+  for (const url of order) {
+    if (tried.has(url)) continue
+    tried.add(url)
+    try {
+      const start = Date.now()
+      const { provider } = await resolveProvider(url, chain)
+      const result = await fn(provider)
+      const latency = Date.now() - start
+      return { ...result, rpcUrl: url, latency }
+    } catch (e) {
+      errors.push(url + ': ' + (e?.message || e))
+      // essayer prochain
+    }
+  }
+  return { error: 'RPC indisponible', details: errors }
+}
+function registerWalletIpc() {
+  ipcMain.handle('wallet:init', async () => {
+    let stored = loadWalletFile()
+    if (stored?.mnemonic && stored.address) {
+      return { address: stored.address }
+    }
+    // create new wallet (random mnemonic)
+    const wallet = ethers.Wallet.createRandom()
+    stored = {
+      mnemonic: wallet.mnemonic?.phrase,
+      address: wallet.address,
+      created: Date.now(),
+      id: randomUUID()
+    }
+    saveWalletFile(stored)
+    return { address: stored.address, created: stored.created }
+  })
+  ipcMain.handle('wallet:balance', async (_e, opts) => {
+    try {
+      const { rpcUrl, chain = 'sepolia' } =
+        typeof opts === 'string' ? { rpcUrl: opts, chain: 'sepolia' } : opts || {}
+      const stored = loadWalletFile()
+      if (!stored?.mnemonic) return { error: 'wallet absent' }
+      const r = await withRpc({ preferredUrl: rpcUrl, chain }, async (provider) => {
+        const [bal, block, feeData] = await Promise.all([
+          provider.getBalance(stored.address),
+          provider.getBlockNumber(),
+          provider.getFeeData().catch(() => ({}))
+        ])
+        const gasWei = feeData?.gasPrice || feeData?.maxFeePerGas || null
+        return {
+          wei: bal.toString(),
+          eth: ethers.formatEther(bal),
+          block,
+          gasGwei: gasWei ? Number(ethers.formatUnits(gasWei, 'gwei')).toFixed(2) : null,
+          chain
+        }
+      })
+      return r
+    } catch (e) {
+      return { error: e.message }
+    }
+  })
+  ipcMain.handle('wallet:send', async (_e, { to, amountEth, rpcUrl, chain = 'sepolia' }) => {
+    try {
+      const stored = loadWalletFile()
+      if (!stored?.mnemonic) return { error: 'wallet absent' }
+      if (!to || !amountEth) return { error: 'param manquant' }
+      const r = await withRpc({ preferredUrl: rpcUrl, chain }, async (provider) => {
+        const wallet = ethers.Wallet.fromPhrase(stored.mnemonic).connect(provider)
+        const tx = await wallet.sendTransaction({
+          to,
+          value: ethers.parseEther(String(amountEth))
+        })
+        return { hash: tx.hash }
+      })
+      return r
+    } catch (e) {
+      return { error: e.message }
+    }
+  })
+  ipcMain.handle('wallet:txStatus', async (_e, { hash, rpcUrl, chain = 'sepolia' }) => {
+    try {
+      const r = await withRpc({ preferredUrl: rpcUrl, chain }, async (provider) => {
+        const receipt = await provider.getTransactionReceipt(hash)
+        if (!receipt) return { pending: true }
+        return { pending: false, status: receipt.status }
+      })
+      return r
+    } catch (e) {
+      return { error: e.message }
+    }
+  })
+}
+
+// ======== Gestion fenêtres (splash + principale) =========
+let splashWindow = null
+let mainWindow = null
+let mainLaunched = false
+
+function createMainWindow() {
+  if (mainLaunched) return
+  mainLaunched = true
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 720,
     minWidth: 1200,
@@ -439,30 +643,63 @@ function createWindow() {
     }
   })
 
-  // Événements pour l'état maximise/restaure
   mainWindow.on('maximize', () => {
     mainWindow.webContents.send('win:maximized', true)
   })
   mainWindow.on('unmaximize', () => {
     mainWindow.webContents.send('win:maximized', false)
   })
-
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.close()
+      splashWindow = null
+    }
   })
-
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
 
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+}
+
+function createSplashWindow() {
+  splashWindow = new BrowserWindow({
+    width: 420,
+    height: 300,
+    frame: false,
+    resizable: false,
+    movable: true,
+    show: false,
+    alwaysOnTop: false,
+    transparent: false,
+    backgroundColor: '#181A1F',
+    titleBarStyle: 'hidden',
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false
+    }
+  })
+  splashWindow.on('ready-to-show', () => splashWindow.show())
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    // On suppose que le serveur Vite sert aussi le fichier splash.html à la racine /splash.html
+    splashWindow.loadURL(process.env['ELECTRON_RENDERER_URL'].replace(/\/$/, '') + '/splash.html')
+  } else {
+    splashWindow.loadFile(join(__dirname, '../renderer/splash.html'))
+  }
+}
+
+function launchMainAfter(delay = 800) {
+  if (mainLaunched) return
+  setTimeout(() => {
+    if (!mainLaunched) createMainWindow()
+  }, delay)
 }
 
 // IPC fenêtres personnalisées
@@ -504,35 +741,88 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+  // Version appli
+  ipcMain.handle('app:version', () => app.getVersion())
 
   registerFsIpc()
+  registerWalletIpc()
   registerWindowControls()
 
-  createWindow()
+  createSplashWindow()
 
-  // Auto update (production only)
+  // Auto update & progression via splash
+  function sendSplash(status, extra = {}) {
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.webContents.send('splash:status', { status, ...extra })
+    }
+  }
+
+  ipcMain.handle('splash:launchMain', () => {
+    sendSplash('launching')
+    createMainWindow()
+  })
+
+  sendSplash('boot')
+
   if (!is.dev) {
     try {
       autoUpdater.autoDownload = true
       autoUpdater.logger = require('electron-log')
       autoUpdater.logger.transports.file.level = 'info'
-      autoUpdater.checkForUpdatesAndNotify()
-      autoUpdater.on('update-downloaded', () => {
-        const win = BrowserWindow.getAllWindows()[0]
-        win && win.webContents.send('update:ready')
+
+      autoUpdater.on('checking-for-update', () => sendSplash('checking'))
+      autoUpdater.on('update-available', (info) => sendSplash('update-available', { info }))
+      autoUpdater.on('update-not-available', (info) => {
+        sendSplash('no-update', { info })
+        launchMainAfter(700)
+      })
+      autoUpdater.on('error', (err) => {
+        sendSplash('error', { message: err?.message })
+        launchMainAfter(1000)
+      })
+      autoUpdater.on('download-progress', (p) => {
+        sendSplash('downloading', {
+          percent: p.percent,
+          transferred: p.transferred,
+          total: p.total,
+          bytesPerSecond: p.bytesPerSecond
+        })
+      })
+      autoUpdater.on('update-downloaded', (info) => {
+        sendSplash('downloaded', { info })
+        // On attend l'action utilisateur (bouton) pour installer
+      })
+
+      autoUpdater.checkForUpdates().catch((e) => {
+        sendSplash('error', { message: e?.message })
+        launchMainAfter(1000)
       })
       ipcMain.handle('update:quitAndInstall', () => {
-        autoUpdater.quitAndInstall()
+        sendSplash('installing')
+        try {
+          autoUpdater.quitAndInstall()
+        } catch (e) {
+          sendSplash('error', { message: e?.message })
+          launchMainAfter(1000)
+        }
       })
     } catch (e) {
       console.error('Updater init error', e)
+      sendSplash('error', { message: e?.message })
+      launchMainAfter(800)
     }
+  } else {
+    // En dev, pas d'updates => splash très bref
+    sendSplash('dev')
+    launchMainAfter(500)
   }
+
+  // (logic déplacée dans la section splash ci-dessus)
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
   })
 })
 

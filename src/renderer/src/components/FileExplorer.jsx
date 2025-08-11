@@ -22,8 +22,10 @@ import {
   FaPlus
 } from 'react-icons/fa'
 import { FaCloudDownloadAlt } from 'react-icons/fa'
+import PropTypes from 'prop-types'
+import { SiEthereum } from 'react-icons/si'
 
-export default function FileExplorer() {
+export default function FileExplorer({ onOpenWallet = () => {} }) {
   // Helper de formatage CPU (évite ReferenceError si utilisé ailleurs / hot reload)
   const formatCpu = useCallback((cpu) => {
     if (!cpu) return { brand: 'CPU', series: '', extra: '', cores: '?', full: 'CPU' }
@@ -77,8 +79,9 @@ export default function FileExplorer() {
   const [drives, setDrives] = useState([])
   const [viewMode, setViewMode] = useState('grid')
   const loadIdRef = useRef(0)
-  // Vue Overview (remplace l'ancien Home)
-  const [showOverview, setShowOverview] = useState(true)
+  // Vue actuelle interne: overview | explorer (le wallet est maintenant géré hors de ce composant)
+  const [currentView, setCurrentView] = useState('overview')
+  const showOverview = currentView === 'overview'
   const [sysStats, setSysStats] = useState(null)
   const [shortcuts, setShortcuts] = useState([])
   const [shortcutIcons, setShortcutIcons] = useState({})
@@ -99,12 +102,13 @@ export default function FileExplorer() {
   const [shortcutDragId, setShortcutDragId] = useState(null)
   const [dragOverShortcutZone, setDragOverShortcutZone] = useState(false)
   const shortcutZoneDragCounter = useRef(0)
+  const goOverview = () => setCurrentView('overview')
 
   const load = useCallback(
     async (dir, pushHistory = true) => {
       if (!dir) return
       // sortir de l'overview seulement lors d'une navigation explicite (pushHistory=true)
-      if (showOverview && pushHistory) setShowOverview(false)
+      if (showOverview && pushHistory) setCurrentView('explorer')
       let target = dir
       if (/^[A-Za-z]:$/.test(target)) target = target + '\\'
       const myId = ++loadIdRef.current
@@ -261,7 +265,8 @@ export default function FileExplorer() {
       const [item] = clone.splice(idxFrom, 1)
       clone.splice(idxTo, 0, item)
       // Optionnel: persister ordre via API si disponible
-      window.api?.app?.shortcuts?.reorder && window.api.app.shortcuts.reorder(clone.map((s) => s.id))
+      window.api?.app?.shortcuts?.reorder &&
+        window.api.app.shortcuts.reorder(clone.map((s) => s.id))
       return clone
     })
   }, [])
@@ -743,12 +748,15 @@ export default function FileExplorer() {
       )}
       <aside className="sidebar-app">
         <div className="side-group" style={{ paddingBottom: 4 }}>
-          <button
-            className={`side-item ${showOverview ? 'active' : ''}`}
-            onClick={() => setShowOverview(true)}
-          >
+          <button className={`side-item ${showOverview ? 'active' : ''}`} onClick={goOverview}>
             <FaHome size={14} />
             <span>Overview</span>
+          </button>
+        </div>
+        <div className="side-group" style={{ paddingBottom: 4 }}>
+          <button className="side-item" onClick={onOpenWallet} title="Aller au wallet">
+            <SiEthereum size={14} />
+            <span>Wallet</span>
           </button>
         </div>
         <div className="side-group">
@@ -844,8 +852,8 @@ export default function FileExplorer() {
             </div>
           </div>
         )}
-      </aside>
-      <main className={`fe-main ${showOverview ? 'overview-mode' : 'no-preview'}`}>
+  </aside>
+  <main className={`fe-main ${showOverview ? 'overview-mode' : 'no-preview'}`}>
         {/* Barre top (cachée en mode Overview) */}
         {!showOverview && (
           <div
@@ -1023,7 +1031,7 @@ export default function FileExplorer() {
             </div>
           </div>
         )}
-        {showOverview ? (
+        {currentView === 'overview' ? (
           <div className="overview-wrap fe-content-scroll overview-gradient">
             <div className="ov-container">
               <div className="ov-header-line">
@@ -1455,7 +1463,7 @@ export default function FileExplorer() {
           </div>
         )}
       </main>
-      {ctxMenu.visible && !showOverview && (
+      {ctxMenu.visible && currentView === 'explorer' && (
         <div className="ctx-menu" style={{ top: ctxMenu.y, left: ctxMenu.x }}>
           {ctxMenu.item ? (
             <>
@@ -1555,4 +1563,8 @@ export default function FileExplorer() {
       )}
     </div>
   )
+}
+
+FileExplorer.propTypes = {
+  onOpenWallet: PropTypes.func
 }
