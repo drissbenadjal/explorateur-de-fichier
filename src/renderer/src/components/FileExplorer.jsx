@@ -25,7 +25,7 @@ import { FaCloudDownloadAlt } from 'react-icons/fa'
 import PropTypes from 'prop-types'
 import { SiEthereum } from 'react-icons/si'
 
-export default function FileExplorer({ onOpenWallet = () => {} }) {
+export default function FileExplorer({ onOpenWallet = () => {}, pendingPath, onConsumePendingPath }) {
   // Helper de formatage CPU (évite ReferenceError si utilisé ailleurs / hot reload)
   const formatCpu = useCallback((cpu) => {
     if (!cpu) return { brand: 'CPU', series: '', extra: '', cores: '?', full: 'CPU' }
@@ -103,6 +103,15 @@ export default function FileExplorer({ onOpenWallet = () => {} }) {
   const [dragOverShortcutZone, setDragOverShortcutZone] = useState(false)
   const shortcutZoneDragCounter = useRef(0)
   const goOverview = () => setCurrentView('overview')
+
+  // Ouvrir un chemin demandé lors du retour depuis Wallet
+  useEffect(() => {
+    if (pendingPath) {
+      load(pendingPath, true)
+      onConsumePendingPath && onConsumePendingPath()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingPath])
 
   const load = useCallback(
     async (dir, pushHistory = true) => {
@@ -1566,5 +1575,7 @@ export default function FileExplorer({ onOpenWallet = () => {} }) {
 }
 
 FileExplorer.propTypes = {
-  onOpenWallet: PropTypes.func
+  onOpenWallet: PropTypes.func,
+  pendingPath: PropTypes.string,
+  onConsumePendingPath: PropTypes.func
 }

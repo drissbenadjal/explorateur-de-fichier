@@ -5,6 +5,7 @@ import { FaMoon, FaSun } from 'react-icons/fa'
 
 function App() {
   const [page, setPage] = useState('explorer') // explorer | wallet
+  const [pendingPath, setPendingPath] = useState(null)
   const [max, setMax] = useState(false)
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('theme')
@@ -24,6 +25,9 @@ function App() {
 
   return (
     <>
+      {/* Overlay de préparation wallet */}
+      {/* Utilise le contexte pour bloquer navigation tant que non prêt */}
+      {/* Note: main.jsx fournit le Provider global */}
       <div className="win-bar">
         <div className="app-title">UltraXplorateur</div>
         <div className="win-drag-spacer" />
@@ -54,9 +58,18 @@ function App() {
         </div>
       </div>
       {page === 'explorer' ? (
-        <FileExplorer onOpenWallet={() => setPage('wallet')} />
+        <FileExplorer
+          onOpenWallet={() => setPage('wallet')}
+          pendingPath={pendingPath}
+          onConsumePendingPath={() => setPendingPath(null)}
+        />
       ) : (
-        <WalletPage onBack={() => setPage('explorer')} />
+        <WalletPage
+          onBack={(path) => {
+            if (path) setPendingPath(path)
+            setPage('explorer')
+          }}
+        />
       )}
     </>
   )

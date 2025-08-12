@@ -30,7 +30,16 @@ const api = {
   },
   version: () => electronAPI.ipcRenderer.invoke('app:version'),
   price: {
-    ethEur: () => electronAPI.ipcRenderer.invoke('price:ethEur')
+    ethEur: () => electronAPI.ipcRenderer.invoke('price:ethEur'),
+    solEur: () => electronAPI.ipcRenderer.invoke('price:solEur')
+  },
+  sol: {
+    generate: () => electronAPI.ipcRenderer.invoke('sol:generate'),
+    address: () => electronAPI.ipcRenderer.invoke('sol:address'),
+  balance: (opts) => electronAPI.ipcRenderer.invoke('sol:balance', opts),
+  airdrop: (opts) => electronAPI.ipcRenderer.invoke('sol:airdrop', opts),
+  send: (opts) => electronAPI.ipcRenderer.invoke('sol:send', opts),
+  networkInfo: (opts) => electronAPI.ipcRenderer.invoke('sol:networkInfo', opts)
   },
   wallet: {
     init: () => electronAPI.ipcRenderer.invoke('wallet:init'),

@@ -9,6 +9,7 @@ import os from 'os'
 import { autoUpdater } from 'electron-updater'
 import { randomUUID } from 'crypto'
 import { ethers } from 'ethers'
+import { Connection, Keypair, LAMPORTS_PER_SOL, clusterApiUrl, PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction } from '@solana/web3.js'
 
 function listDrives() {
   // Windows: tester les lettres A-Z et enrichir avec free/size si possible
@@ -315,6 +316,132 @@ function registerFsIpc() {
       const img = await getIconWithFallback(targetPath)
       if (img) return { data: img.toPNG().toString('base64'), mime: 'image/png' }
       return { error: 'icone indisponible' }
+    } catch (e) {
+      return { error: e.message }
+    }
+  })
+
+  // ========= Solana (démo simple) =========
+  let solanaKeypair = null
+  const solKeyFile = () => {
+    try {
+      return path.join(app.getPath('userData'), 'sol-key.json')
+    } catch {
+      return path.join(process.cwd(), 'sol-key.json')
+    }
+  }
+  function loadSolanaKeypair() {
+    try {
+      const f = solKeyFile()
+      if (!fs.existsSync(f)) return null
+      const raw = JSON.parse(fs.readFileSync(f, 'utf8'))
+      if (raw && raw.secretKey) {
+        const sk = Buffer.from(raw.secretKey, 'base64')
+        return Keypair.fromSecretKey(new Uint8Array(sk))
+      }
+    } catch {
+      // ignore
+    }
+    return null
+  }
+  function saveSolanaKeypair(kp) {
+    try {
+      const f = solKeyFile()
+      const sk = Buffer.from(kp.secretKey).toString('base64')
+      fs.writeFileSync(f, JSON.stringify({ secretKey: sk }, null, 2), 'utf8')
+    } catch {
+      // ignore
+    }
+  }
+  ipcMain.handle('sol:generate', async (_e) => {
+    try {
+      solanaKeypair = Keypair.generate()
+      saveSolanaKeypair(solanaKeypair)
+      return { address: solanaKeypair.publicKey.toBase58() }
+    } catch (e) {
+      return { error: e.message }
+    }
+  })
+  ipcMain.handle('sol:address', async () => {
+    try {
+      if (!solanaKeypair) solanaKeypair = loadSolanaKeypair()
+      if (!solanaKeypair) return { error: "Aucune clé Solana, génère d'abord." }
+      return { address: solanaKeypair.publicKey.toBase58() }
+    } catch (e) {
+      return { error: e.message }
+    }
+  })
+  ipcMain.handle('sol:balance', async (_e, { network } = {}) => {
+    try {
+      if (!solanaKeypair) solanaKeypair = loadSolanaKeypair()
+      if (!solanaKeypair) return { error: "Aucune clé Solana, génère d'abord." }
+      const cluster = network === 'mainnet' ? 'mainnet-beta' : 'devnet'
+      const conn = new Connection(clusterApiUrl(cluster), 'confirmed')
+      const lamports = await conn.getBalance(new PublicKey(solanaKeypair.publicKey))
+      return { sol: lamports / LAMPORTS_PER_SOL, cluster }
+    } catch (e) {
+      return { error: e.message }
+    }
+  })
+  ipcMain.handle('sol:airdrop', async (_e, { network, amount } = {}) => {
+    try {
+      if (!solanaKeypair) solanaKeypair = loadSolanaKeypair()
+      if (!solanaKeypair) return { error: "Aucune clé Solana, génère d'abord." }
+      const cluster = network === 'mainnet' ? 'mainnet-beta' : 'devnet'
+      if (cluster !== 'devnet') return { error: 'Airdrop disponible uniquement sur devnet' }
+      const conn = new Connection(clusterApiUrl(cluster), 'confirmed')
+      const sig = await conn.requestAirdrop(
+        new PublicKey(solanaKeypair.publicKey),
+        Math.floor((amount || 0.1) * LAMPORTS_PER_SOL)
+      )
+      return { signature: sig }
+    } catch (e) {
+      return { error: e.message }
+    }
+  })
+  ipcMain.handle('sol:send', async (_e, { to, amountSol, network } = {}) => {
+    try {
+      if (!solanaKeypair) solanaKeypair = loadSolanaKeypair()
+      if (!solanaKeypair) return { error: "Aucune clé Solana, génère d'abord." }
+      if (!to) return { error: 'Destinataire manquant' }
+      const value = Number(amountSol)
+      if (!isFinite(value) || value <= 0) return { error: 'Montant invalide' }
+      const cluster = network === 'mainnet' ? 'mainnet-beta' : 'devnet'
+      const conn = new Connection(clusterApiUrl(cluster), 'confirmed')
+      const toPub = new PublicKey(to)
+      const tx = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: solanaKeypair.publicKey,
+          toPubkey: toPub,
+          lamports: Math.floor(value * LAMPORTS_PER_SOL)
+        })
+      )
+      const sig = await sendAndConfirmTransaction(conn, tx, [solanaKeypair])
+      return { signature: sig }
+    } catch (e) {
+      return { error: e.message }
+    }
+  })
+  ipcMain.handle('price:solEur', async () => {
+    try {
+      async function tryCoingecko() {
+        const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=eur&include_24hr_change=true')
+        if (!r.ok) throw new Error('coingecko http ' + r.status)
+        const j = await r.json()
+        if (!j?.solana) throw new Error('coingecko invalid')
+        return { price: j.solana.eur, change: j.solana.eur_24h_change, source: 'coingecko' }
+      }
+      async function tryBinance() {
+        const r = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=SOLEUR')
+        if (!r.ok) throw new Error('binance http ' + r.status)
+        const j = await r.json()
+        if (!j?.price) throw new Error('binance invalid')
+        return { price: parseFloat(j.price), change: null, source: 'binance' }
+      }
+      let data = null
+      try { data = await tryCoingecko() } catch { try { data = await tryBinance() } catch { /* ignore */ } }
+      if (!data) return { error: 'sources indisponibles' }
+      return data
     } catch (e) {
       return { error: e.message }
     }
